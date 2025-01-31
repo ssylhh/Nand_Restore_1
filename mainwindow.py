@@ -5,6 +5,7 @@ import configparser
 from PySide6.QtWidgets import QApplication, QMainWindow, QCheckBox
 # from PySide6.QtCore import Qt
 import os
+import threading
 
 # Important:
 # You need to run the following command to generate the ui_form.py file
@@ -29,7 +30,8 @@ class MainWindow(QMainWindow):
         self.gridLayout = self.ui.gridLayout
         self.lineEdit = self.ui.lineEdit_3
         
-        self.ping_ip()
+        # self.ping_ip()
+        threading.Thread(target=self.ping_ip, daemon=True).start()
 
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         dll_path = os.path.join(self.current_dir, "K23A_YB_x64.dll")
@@ -135,32 +137,48 @@ class MainWindow(QMainWindow):
                             widget.stateChanged.connect(self.on_checkbox_changed)  # 기본 메서드 호출
 
 
-    def ping_ip(self, timeout=10, buffer_size=32):
+    def ping_ip(self, timeout=120, buffer_size=32):
         # ip_address = "10.106.14.73"
         ip_address = "192.168.0.7"
+        # try:
+        #     response_time = ping(ip_address, timeout=timeout, size=buffer_size)
+
+        #     print(f'response_time = {response_time}')
+
+        #     if response_time is None:
+        #         self.ui.tcp_status_label.setText("status: failure\nerror: Request timed out")
+        #         return {
+        #             "status": "failure",
+        #             "error": "Request timed out"
+        #         }                
+        #     else:
+        #         response_time = response_time * 1000
+        #         self.ui.tcp_status_label.setText(f"status: success\nresponse_time_ms: {response_time}")
+        #         return {
+        #             "status": "success",
+        #             "response_time_ms": response_time  # Convert to milliseconds
+        #         }
+        # except Exception as e:
+        #     return {
+        #         "status": "failure",
+        #         "error": str(e)
+        #     }
         try:
             response_time = ping(ip_address, timeout=timeout, size=buffer_size)
 
-            print(f'response_time = {response_time}')
-
-            if response_time is None:
-                self.ui.tcp_status_label.setText("status: failure\nerror: Request timed out")
-                return {
-                    "status": "failure",
-                    "error": "Request timed out"
-                }
+            if not response_time:  
+                error_msg = "Ping failed: No response"
             else:
-                response_time = response_time * 1000
+                response_time *= 1000  # Convert to milliseconds
                 self.ui.tcp_status_label.setText(f"status: success\nresponse_time_ms: {response_time}")
-                return {
-                    "status": "success",
-                    "response_time_ms": response_time  # Convert to milliseconds
-                }
+                return {"status": "success", "response_time_ms": response_time}
+
         except Exception as e:
-            return {
-                "status": "failure",
-                "error": str(e)
-            }
+            error_msg = f"Ping failed: {str(e)}"
+       
+        self.ui.tcp_status_label.setText(f"status: failure\nerror: {error_msg}")
+        return {"status": "failure", "error": error_msg}            
+            
             
     # def on_checkbox12_changed(self, state): 
     def on_checkbox12_changed(self):
