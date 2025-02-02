@@ -2,7 +2,7 @@
 import sys
 import configparser
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QCheckBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QCheckBox, QMessageBox
 # from PySide6.QtCore import Qt
 import os
 import threading
@@ -34,10 +34,28 @@ class MainWindow(QMainWindow):
         self.start_ping_thread()  
 
 
-        self.current_dir = os.path.dirname(os.path.abspath(__file__))
-        dll_path = os.path.join(self.current_dir, "K23A_YB_x64.dll")
+        # self.current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        if getattr(sys, 'frozen', False):             
+            self.current_dir = os.path.dirname(sys.executable)
+        else:          
+            self.current_dir = os.path.dirname(os.path.abspath(__file__))        
+    
+    
+        # dll_path = os.path.join(self.current_dir, "K23A_YB_x64.dll")
+        # self.my_dll = MyDllWrapper(dll_path)
 
-        self.my_dll = MyDllWrapper(dll_path)
+        self.dll_path = self.find_any_dll()
+
+        if not self.dll_path:
+            return  
+
+        try:
+            self.my_dll = MyDllWrapper(self.dll_path)
+        except Exception as e:
+            QMessageBox.critical(self, "DLL 로드 오류", f"DLL을 로드하는 중 오류 발생:\n{str(e)}")
+            return           
+        
 
         self.ui.all_load.clicked.connect(lambda: self.all_load())    
         
@@ -48,6 +66,20 @@ class MainWindow(QMainWindow):
         self.connect_gridLayout_checkboxes()
         self.load_dll_filename_to_ui()
         self.load_ini_info()
+
+    def find_any_dll(self):
+        
+        dll_files = [f for f in os.listdir(self.current_dir) if f.lower().endswith('.dll')]
+
+        if not dll_files:
+            QMessageBox.critical(self, "No Dll files", " DLL file not available!\n"
+                                  "Position DLL file at the same directory.")
+            return None
+        
+        selected_dll = dll_files[0] 
+        QMessageBox.information(self, "DLL Loading", f"Next DLL will be loaded\n{selected_dll}")
+        return os.path.join(self.current_dir, selected_dll)
+
 
     def start_ping_thread(self):
         threading.Thread(target=self.ping_ip, daemon=True).start()
