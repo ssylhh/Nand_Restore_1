@@ -28,10 +28,11 @@ class MainWindow(QMainWindow):
     def initial_setup(self):
 
         self.gridLayout = self.ui.gridLayout
-        self.lineEdit = self.ui.lineEdit_3
         
         # self.ping_ip()
-        threading.Thread(target=self.ping_ip, daemon=True).start()
+        # threading.Thread(target=self.ping_ip, daemon=True).start()
+        self.start_ping_thread()  
+
 
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         dll_path = os.path.join(self.current_dir, "K23A_YB_x64.dll")
@@ -46,9 +47,12 @@ class MainWindow(QMainWindow):
        
         self.connect_gridLayout_checkboxes()
         self.load_dll_filename_to_ui()
-        self.load_ini_to_lineEdit()
+        self.load_ini_info()
 
-    def load_ini_to_lineEdit(self):
+    def start_ping_thread(self):
+        threading.Thread(target=self.ping_ip, daemon=True).start()
+
+    def load_ini_info(self):
         
         ini_file = self.find_ini_file()
         
@@ -56,11 +60,11 @@ class MainWindow(QMainWindow):
             name_value = self.parse_ini_file(ini_file, "ASIC_Info")
             
             if name_value:
-                self.lineEdit.setText(name_value)
+                self.ui.INI_info.setText("ASIC : " + name_value)
             else:
-                self.lineEdit.setText("Not available")
+                self.ui.INI_info.setText("ASIC info. Not available")
         else:
-            self.lineEdit.setText("File N.A.")
+            self.ui.INI_info.setText("INI File N.A.")
 
     def find_ini_file(self):
         
@@ -68,16 +72,7 @@ class MainWindow(QMainWindow):
             if file.endswith(".ini"):
                 return file  
         return None
-
-    # def parse_ini_file(self, ini_file, key_name):
-       
-    #     config = configparser.ConfigParser()
-    #     config.read(ini_file, encoding='utf-8')
-
-    #     for section in config.sections():
-    #         if key_name in config[section]:  # 특정 key 포함 여부 확인
-    #             return config[section][key_name]  
-    #     return None        
+   
 
     def parse_ini_file(self, ini_file, key_name):
      
@@ -114,14 +109,14 @@ class MainWindow(QMainWindow):
 
         if len(dll_files) == 0:
             # QMessageBox.critical(self, "오류", "DLL 파일이 존재하지 않습니다.")
-            self.ui.lineEdit_2.setText("No DLL file")
+            self.ui.DLLName.setText("DLL Name : No DLL file")
             return
         elif len(dll_files) > 1:
             # QMessageBox.critical(self, "오류", "DLL 파일이 2개 이상 존재합니다. 하나만 있어야 합니다.")
-            self.ui.lineEdit_2.setText("two more DLL files")
+            self.ui.DLLName.setText("DLL Name : two more DLL files")
             return
        
-        self.ui.lineEdit_2.setText(dll_files[0])
+        self.ui.DLLName.setText("DLL Name : " + dll_files[0])
 
 
     def connect_gridLayout_checkboxes(self):
@@ -137,48 +132,56 @@ class MainWindow(QMainWindow):
                             widget.stateChanged.connect(self.on_checkbox_changed)  # 기본 메서드 호출
 
 
-    def ping_ip(self, timeout=120, buffer_size=32):
-        # ip_address = "10.106.14.73"
-        ip_address = "192.168.0.7"
-        # try:
-        #     response_time = ping(ip_address, timeout=timeout, size=buffer_size)
+    # def ping_ip(self, timeout=120, buffer_size=32):
+    #     # ip_address = "10.106.14.73"
+    #     ip_address = "192.168.0.7"
+        
+    #     try:
+    #         response_time = ping(ip_address, timeout=timeout, size=buffer_size)
 
-        #     print(f'response_time = {response_time}')
+    #         if not response_time:  
+    #             error_msg = "Ping failed: No response"
+    #         else:
+    #             response_time *= 1000  # Convert to milliseconds
+    #             self.ui.tcp_status_label.setText(f"status: success\nresponse_time_ms: {response_time}")
+    #             return {"status": "success", "response_time_ms": response_time}
 
-        #     if response_time is None:
-        #         self.ui.tcp_status_label.setText("status: failure\nerror: Request timed out")
-        #         return {
-        #             "status": "failure",
-        #             "error": "Request timed out"
-        #         }                
-        #     else:
-        #         response_time = response_time * 1000
-        #         self.ui.tcp_status_label.setText(f"status: success\nresponse_time_ms: {response_time}")
-        #         return {
-        #             "status": "success",
-        #             "response_time_ms": response_time  # Convert to milliseconds
-        #         }
-        # except Exception as e:
-        #     return {
-        #         "status": "failure",
-        #         "error": str(e)
-        #     }
-        try:
-            response_time = ping(ip_address, timeout=timeout, size=buffer_size)
-
-            if not response_time:  
-                error_msg = "Ping failed: No response"
-            else:
-                response_time *= 1000  # Convert to milliseconds
-                self.ui.tcp_status_label.setText(f"status: success\nresponse_time_ms: {response_time}")
-                return {"status": "success", "response_time_ms": response_time}
-
-        except Exception as e:
-            error_msg = f"Ping failed: {str(e)}"
+    #     except Exception as e:
+    #         error_msg = f"Ping failed: {str(e)}"
        
-        self.ui.tcp_status_label.setText(f"status: failure\nerror: {error_msg}")
-        return {"status": "failure", "error": error_msg}            
+    #     self.ui.tcp_status_label.setText(f"status: failure\nerror: {error_msg}")
+    #     return {"status": "failure", "error": error_msg}            
+ 
+    def ping_ip(self, timeout=120, buffer_size=32):
+        ip_address = "192.168.0.7"
+
+        while True:
+            try:
+                response_time = ping(ip_address, timeout=timeout, size=buffer_size)
+
+                if response_time:  
+                    response_time *= 1000  # Convert to milliseconds
+                    # self.ui.tcp_status_label.setText(f"status: success\nresponse_time_ms: {response_time}")
+                    self.update_ui(status="success", response_time=response_time)
+                    return  
+
+            except Exception as e:
+                error_msg = f"Ping failed: {str(e)}"
+
+            # self.ui.tcp_status_label.setText(f"status: failure\nRetrying in 5 seconds...")  
+            self.update_ui(status="failure", error=None)          
+            time.sleep(5)  
             
+    def update_ui(self, status, response_time=None, error=None):
+        
+        if status == "success":
+            self.ui.tcp_status_label.setText(f"status: success\nresponse_time_ms: {response_time}")
+            self.ui.tcp_status_label.setStyleSheet("color: green;")      
+            self.ui.all_load.setStyleSheet("background-color: lightgreen; color: black;")        
+        else:
+            self.ui.tcp_status_label.setText(f"status: failure\nRetrying in 5 seconds...")
+            self.ui.tcp_status_label.setStyleSheet("color: red;")  
+            self.ui.all_load.setStyleSheet("background-color: red; color: white;")             
             
     # def on_checkbox12_changed(self, state): 
     def on_checkbox12_changed(self):
@@ -235,7 +238,7 @@ class MainWindow(QMainWindow):
 
         print(f"Checked Options (Binary): {bin(checked_options)}")
         print(f"Checked Options : {checked_options}")
-        self.ui.tcp_status_label.setText(f"Checked: {bin(checked_options)}")       
+        # self.ui.tcp_status_label.setText(f"Checked: {bin(checked_options)}")       
         
         
 #        errcode = self.my_dll.k23_all_load("NAND_RESTORE\0", self.current_dir + "\0", 0 , True)
